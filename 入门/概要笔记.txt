@@ -1,0 +1,130 @@
+1.准备环境
+2.安装JDK
+3.上传spark安装包
+4.解压spark并修改配置文件（两个配置文件，第一个配置文件添加了3个配置文件）
+5.将配置好的spark安装程序拷贝给其他机器for i in {5..8}; do scp -r /bigdata/spark-2.2.0-bin-hadoop2.7/ node-$i:/bigdata; done 
+
+6.启动spark (sbin/start-all.sh)  
+  问题：Worker怎么知道Master在哪里嗯？读取spark-env.sh文件得知Master在哪里的
+7.通过web页面访问spark管理页面（master所在机器的地址+8080端口）
+
+-----------------------------
+
+配置了高可用的spark集群，修改了一个配置文件
+配置了Worker运行时的资源（内存、cores）
+
+启动集群
+	1.启动ZK集群
+	2.启动spark集群，但是只会启动一个Master，另外一个Master手动启动
+
+-----------------------------
+
+提交第一个spark应用到集群中运行
+bin/spark-submit --master spark://node-5:7077 --class org.apache.spark.examples.SparkPi examples/jars/spark-examples_2.11-2.2.0.jar 100
+
+
+ bin/spark-submit --master spark://node-5:7077 --class org.apache.spark.examples.SparkPi --executor-memory 2048mb --total-executor-cores 12  examples/jars/spark-examples_2.11-2.2.0.jar 1000
+
+--executor-memory 每个executor使用的内存大小
+--total-executor-cores 整个app使用的核数
+
+/*
+ spark-submit  脚本
+ --master  指定master
+ --class   指定类
+ 注意参数要在jar包之前指定，这些参数都是sparksubmit传给spark的；最后跟jar包路径及jar包运行参数
+*/
+-----------------------------
+
+提交一个spark程序到spark集群，会产生哪些进程？
+
+SparkSubmint（Driver）提交任务
+Executor 执行真正的计算任务的
+
+提交任务可以指定多个master地址，目的是为了提交任务高可用
+
+ bin/spark-submit --master spark://node-4:7077,node-5:7077 --class org.apache.spark.examples.SparkPi --executor-memory 2048mb --total-executor-cores 12  examples/jars/spark-examples_2.11-2.2.0.jar 1000
+
+/*
+ 问题：spark中master，worker，driver，excutor都负责什么工作
+ driver：提交任务，并下发计算任务
+ master：负责worker的管理，负责资源调度
+ worker：报活、启动和管理worker
+ executor：负责执行计算任务
+*/
+ 
+/*
+1. 启动master
+2. worker通过rpc通信向master注册信息，ha集群中会将worker信息持久化到zk，worker定时向master发送心跳
+3. 客户端启动driver进程（sparksubmit）提交任务，先向master申请资源
+	master负责资源调度，即分配资源（也就是在哪些worker上启动excutor）
+4. master与worker进行rpc通信，让worker启动executor，同时将分区的参数传递给worker
+5. worker启动executor
+6. executor与driver进行通信执行任务
+	executor会主动联系driver（通过master -> worker -> executor知道driver在哪）
+	真正的计算逻辑是在driver端，driver端生成task，通过网络将任务分发到excutor端执行
+*/
+
+
+ ----------------------------
+
+Spark Shell（是一个交互式的命令行，里面可以写spark程序，方便学习和测试，他也是一个客户端，用于提交spark应用程序）
+
+/bigdata/spark-2.2.0-bin-hadoop2.7/bin/spark-shell
+上面的方式没有指定master的地址，即用的是spark的local模式运行的（模拟的spark集群运行的过程）
+
+/bigdata/spark-2.2.0-bin-hadoop2.7/bin/spark-shell --master spark://node-4:7077,node-5:7077
+上面是指定了master的地址，那么就会将任务提交到集群，开始时sparksubmit（客户端）要连接Master，并申请计算资源（内存和核数），Master进行资源调度（就是让那些Worker启动Executor），在准备工作时，这些进程都已经创建好了   /*就是在sparkcontext的时候完成的*/
+
+用spark Shell完成WordCount计算
+启动HDFS(上传数据到hdfs)，sc是spark core（RDD）的执行入口
+sc.textFile("hdfs://node-4:9000/wc").flatMap(_.split(" ")).map((_, 1)).reduceByKey(_+_).sortBy(_._2, false).collect
+
+
+sc.textFile("hdfs://ns1/logs/application_1516005154720_38836/A06-R12-I10-133.JD.LOCAL_23892").flatMap(_.split(" ")).map((_,1)).reduceByKey(_+_).sortBy(_._2,false).collect
+
+ ----------------------------
+ maptask和reducetask在Yarnchild中执行
+ client提交任务
+ applicationMaster监控task的执行，管理yarnchild
+ 
+
+ Yarn和Spark的StandAlone调度模式对比
+
+ ResouceManager        Master   管理子节点、资源调度、接收任务请求
+ NodeManger            Worker   管理当前节点，并管理子进程
+ YarnChild             Executor 运行真正的计算逻辑的（Task）
+ Client                SparkSubmit  （Client + ApplicaitonMaster）提交app，管理该任务的Executor
+ ApplicaitonMaster 					 并将Task提交到（Executor）
+     
+----------------------------
+
+用idea编写spark程序
+创建RDD，然后对RDD进行操作（调用RDD的方法，方法分为两类，一个叫Transformation(懒 lazy)，一类叫Action（会执行任务））
+
+rdd上的方法和scala原生的方法是有区别的
+
+写好程序，打包上传集群运行
+
+本地模式运行spark程序，setMaster("local[*]")
+
+----------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
