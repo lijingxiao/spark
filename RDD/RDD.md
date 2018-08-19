@@ -29,8 +29,21 @@ val rdd2 = sc.textFile("hdfs://node1:9000/words.txt")
 3）调用一个已经存在的RDD的Transformation，会生成一个新的RDD
 #### RDD分区个数
 1.如果是将Driver端的Scala集合并行化创建RDD，并且没有指定RDD的分区，RDD的分区就是为该app分配的中的和核数
+
 2.如果是重hdfs中读取数据创建RDD，并且设置了最小分区数量是1，那么RDD的分区数据即使输入切片的数据，如果不设置最小分区的数量，即spark调用textFile时会默认传入2，那么RDD的分区数量会大于等于输入切片的数量
 	
 先计算所有文件大小之和，会设置目标大小为该值除以最小分区数量的大小（默认值是2，也就是取所有文件大小之和的一半作为目标大小），如果某个文件大小超过目标值的1.1倍，就会将该文件按照目标大小切分
  
- 
+#### mapPartitionsWithIndex
+RDD的map方法，是Executor中执行时，是一条一条的将数据拿出来处理
+
+mapPartitionsWithIndex 一次拿出一个分区（分区中并没有数据，而是记录要读取哪些数据，真正生成的Task会读取多条数据），并且可以将分区的编号取出来
+
+功能：取分区中对应的数据时，还可以将分区的编号取出来，这样就可以知道数据是属于哪个分区的（哪个区分对应的Task的数据）
+
+	//该函数的功能是将对应分区中的数据取出来，并且带上分区编号
+	
+    val func = (index: Int, it: Iterator[Int]) => {
+      it.map(e => s"part: $index, ele: $e")
+    }
+	rdd.mapPartitionsWithIndex(fun)
