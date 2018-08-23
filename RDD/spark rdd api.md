@@ -41,4 +41,37 @@ an associative operator used to combine results from different partitions
   res3: String = 10    //或者01
   ```
 也就是说传入的参数zeroValue并不是挨个将自己和分区内的记录进行计算，而是不断迭代计算，将和第一条结算的结果与第二条进行计算
+ ### aggregateByKey
+
+aggregateByKey与aggregate类似。
+
+区别是：aggregateByKey把相关key的元素进行reduce计算，并且**初始值只运用于Partition内的reduce操作**。
+```
+scala> val pairRDD = sc.parallelize(List( ("cat",2), ("cat", 5), ("mouse", 4),("cat", 12), ("dog", 12), ("mouse", 2)), 2)
+pairRDD: org.apache.spark.rdd.RDD[(String, Int)] = ParallelCollectionRDD[0] at parallelize at <console>:24
+
+scala> pairRDD.aggregateByKey(100)(math.max(_, _), _ + _).collect
+res0: Array[(String, Int)] = Array((dog,100), (cat,200), (mouse,200))
+```
+aggregateByKey执行时需要通过shuffle将key相同的元素拉到同一个executor执行
+### collectAsMap
+
+ ![collect执行过程](https://github.com/lijingxiao/spark/blob/master/RDD/collect.png)
+ 1. 启动master，worker，worker向msater注册，并定期发送心跳报活；
+ 2. 启动driver，提交任务，向master申请资源，master分配资源；
+ 	注：此时如果核数不够，不会影响任务提交，但是如果内存不够，任务就不能提交
+ 3. master下发命令，worker启动executor；
+ 4. executor与driver通信（通过driver和worker）
+ 
+ 5. action触发的时候（从后往前）推算rdd逻辑关系，生成task（一个分区对应一个task，记录了从哪里获取数据源），将task发往executor；
+ 6. executor将driver端的数据通过网络拉取到executor（边读边计算），并进行计算；
+ 7. 计算完成之后，driver端拉取executor的计算结果
+ 
+ 如果要持久化数据（Redis/MySQL/Hbase等）
+ 不要在driver端进行写（要将executor的结果通过网络传输到driver，并且只有一个链接）
+应该在executor端直接写数据
+ 
+ 
+ 
+ 
  
