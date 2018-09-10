@@ -71,7 +71,53 @@ aggregateByKey执行时需要通过shuffle将key相同的元素拉到同一个ex
  不要在driver端进行写（要将executor的结果通过网络传输到driver，并且只有一个链接）
 应该在executor端直接写数据
  
- 
+### combineByKey
+val rdd1 = sc.textFile("hdfs://node-1:9000/wc").flatMap(_.split(" ")).map((_, 1))
+val rdd2 = rdd1.combineByKey(x => x, (a: Int, b: Int) => a + b, (m: Int, n: Int) => m + n)
+rdd2.collect
+
+val rdd3 = rdd1.combineByKey(x => x + 10, (a: Int, b: Int) => a + b, (m: Int, n: Int) => m + n)
+rdd3.collect
+
+
+val rdd4 = sc.parallelize(List("dog","cat","gnu","salmon","rabbit","turkey","wolf","bear","bee"), 3)
+val rdd5 = sc.parallelize(List(1,1,2,2,2,1,2,2,2), 3)
+val rdd6 = rdd5.zip(rdd4)
+val rdd7 = rdd6.combineByKey(List(_), (x: List[String], y: String) => x :+ y, (m: List[String], n: List[String]) => m ++ n)
+
+
+### countByKey 
+
+val rdd1 = sc.parallelize(List(("a", 1), ("b", 2), ("b", 2), ("c", 2), ("c", 1)))
+rdd1.countByKey
+rdd1.countByValue
+
+
+### filterByRange
+
+val rdd1 = sc.parallelize(List(("e", 5), ("c", 3), ("d", 4), ("c", 2), ("a", 1)))
+val rdd2 = rdd1.filterByRange("b", "d")
+rdd2.colllect
+
+
+### flatMapValues
+val a = sc.parallelize(List(("a", "1 2"), ("b", "3 4")))
+rdd3.flatMapValues(_.split(" "))
+
+
+### foldByKey
+
+val rdd1 = sc.parallelize(List("dog", "wolf", "cat", "bear"), 2)
+val rdd2 = rdd1.map(x => (x.length, x))
+val rdd3 = rdd2.foldByKey("")(_+_)
+
+val rdd = sc.textFile("hdfs://node-1.edu360.cn:9000/wc").flatMap(_.split(" ")).map((_, 1))
+rdd.foldByKey(0)(_+_)
+
+
+### foreachPartition
+val rdd1 = sc.parallelize(List(1, 2, 3, 4, 5, 6, 7, 8, 9), 3)
+rdd1.foreachPartition(x => println(x.reduce(_ + _)))
  
  
  
