@@ -4,17 +4,31 @@ RDD的算子分为两类，一类是Transformation（lazy），一类是Action�
 
 **RDD不存真正要计算的数据，而是记录了RDD的转换关系**（调用了什么方法，传入什么函数）
 
+RDD与普通集合的区别：
+* RDD里边记录的是描述信息（从哪里读数据，以后对数据如何进行计算），RDD的方法分为两类，Transformation（lazy）和Action（生成task并发送到Executor中执行）
+* scala的集合里面存储的是真正的数据，执行方法后立即返回结果
 #### RDD的属性
  
-1）一组分片（Partition），即数据集的基本组成单位。对于RDD来说，每个分片都会被一个计算任务处理，并决定并行计算的粒度。用户可以在创建RDD时指定RDD的分片个数，如果没有指定，那么就会采用默认值。默认值就是程序所分配到的CPU Core的数目。
+1）一系列分区（Partition），即数据集的基本组成单位。对于RDD来说，每个分片都会被一个计算任务处理，并决定并行计算的粒度。用户可以在创建RDD时指定RDD的分区个数，如果没有指定，那么就会采用默认值。默认值就是程序所分配到的CPU Core的数目。
 
-2）一个计算每个分区的函数。Spark中RDD的计算是以分片为单位的，每个RDD都会实现compute函数以达到这个目的。compute函数会对迭代器进行复合，不需要保存每次计算的结果。
+2）一个计算每个分区的函数。每一个输入切片都会有一个函数作用在上面
 
-3）RDD之间的依赖关系。RDD的每次转换都会生成一个新的RDD，所以RDD之间就会形成类似于流水线一样的前后依赖关系。在部分分区数据丢失时，Spark可以通过这个依赖关系重新计算丢失的分区数据，而不是对RDD的所有分区进行重新计算。
+Spark中RDD的计算是以分片为单位的，每个RDD都会实现compute函数以达到这个目的。compute函数会对迭代器进行复合，不需要保存每次计算的结果。
 
-4）一个Partitioner，即RDD的分片函数。当前Spark中实现了两种类型的分片函数，一个是基于哈希的HashPartitioner，另外一个是基于范围的RangePartitioner。只有对于于key-value的RDD，才会有Partitioner，非key-value的RDD的Parititioner的值是None。Partitioner函数不但决定了RDD本身的分片数量，也决定了parent RDD Shuffle输出时的分片数量。
+3）RDD与RDD之间存在依赖关系。
 
-5）一个列表，存储存取每个Partition的优先位置（preferred location）。对于一个HDFS文件来说，这个列表保存的就是每个Partition所在的块的位置。按照“移动数据不如移动计算”的理念，Spark在进行任务调度的时候，会尽可能地将计算任务分配到其所要处理数据块的存储位置。
+RDD的每次转换都会生成一个新的RDD，所以RDD之间就会形成类似于流水线一样的前后依赖关系。在部分分区数据丢失时，Spark可以通过这个依赖关系重新计算丢失的分区数据，而不是对RDD的所有分区进行重新计算。
+
+4）（可选）如果存储的是KV类型，shuffle的时候回产生一个分区器Partitioner，默认是hash partitioner
+
+一个Partitioner，即RDD的分片函数。当前Spark中实现了两种类型的分片函数，一个是基于哈希的HashPartitioner，另外一个是基于范围的RangePartitioner。只有对于于key-value的RDD，才会有Partitioner，非key-value的RDD的Parititioner的值是None。Partitioner函数不但决定了RDD本身的分片数量，也决定了parent RDD Shuffle输出时的分片数量。
+
+5）如果读取的是HDFS的数据，那么会有一个最优位置。（在调度task之前会与namenode进行通信）
+
+一个列表，存储存取每个Partition的优先位置（preferred location）。对于一个HDFS文件来说，这个列表保存的就是每个Partition所在的块的位置。按照“移动数据不如移动计算”的理念，Spark在进行任务调度的时候，会尽可能地将计算任务分配到其所要处理数据块的存储位置。
+
+
+在Driver端创建一个RDD的实例，在其中记录了计算逻辑，可以操作分布在多台机器上的数据（通过hdfs api等接口）
 
 #### 创建RDD
 1）由一个已经存在的Scala集合创建。
