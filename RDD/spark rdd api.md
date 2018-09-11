@@ -72,20 +72,56 @@ aggregateByKey执行时需要通过shuffle将key相同的元素拉到同一个ex
 应该在executor端直接写数据
  
 ### combineByKey
+函数原型
+ ```scala
+def combineByKey[C](
+      createCombiner: V => C,
+      mergeValue: (C, V) => C,
+      mergeCombiners: (C, C) => C,
+      partitioner: Partitioner,
+      mapSideCombine: Boolean = true,
+      serializer: Serializer = null)
+ ```
+ ```scala
+val rdd4 = sc.parallelize(List("dog","cat","gnu","salmon","rabbit","turkey","wolf","bear","bee"), 3)
+val rdd5 = sc.parallelize(List(1,1,2,2,2,1,2,2,2), 3)
+val rdd6 = rdd5.zip(rdd4)
+//++=用于向数组中追加内容，++=右侧可以是任何集合
+val rdd7 = rdd6.combineByKey(List(_), (x: List[String], y: String) => x :+ y, (m: List[String], n: List[String]) => m ++ n)
+ ```
+ - 第一个函数功能：将分好组的key的第一个value取出来进行操作
+ 三个分区分别得到
+ ```
+ 1,ListBuffer(dog)  2,ListBuffer(gnu)
+ 1,ListBuffer(turkey)  2,ListBuffer(salmon)
+ 2,ListBuffer(wolf)
+ ```
+ - 第二个函数功能：将value中的其他元素加入listBuffer
+```
+ 1,ListBuffer(dog,cat)  2,ListBuffer(gnu)
+ 1,ListBuffer(turkey)  2,ListBuffer(salmon,rabbit)
+ 2,ListBuffer(wolf,bear,bee)
+```
+- 第三个函数：shuffle，将所有分区数据合并
+```
+ 1,ListBuffer(dog,cat,turkey)  
+ 2,ListBuffer(gnu,salmon,rabbit,wolf,bear,bee)
+```
+如果想要改变分区个数,增加分区器参数
+```scala
+val rdd7 = rdd6.combineByKey(List(_), (x: List[String], y: String) => x :+ y, (m: List[String], n: List[String]) => m ++ n， new HashPartitioner(2), true, null)
+//true表示是否在map端进行合并
+```
+使用combineByKey进行wordcount
+```scala
 val rdd1 = sc.textFile("hdfs://node-1:9000/wc").flatMap(_.split(" ")).map((_, 1))
+//注意combineByKey是一个底层函数，必须指明函数中的参数类型
 val rdd2 = rdd1.combineByKey(x => x, (a: Int, b: Int) => a + b, (m: Int, n: Int) => m + n)
 rdd2.collect
 
 val rdd3 = rdd1.combineByKey(x => x + 10, (a: Int, b: Int) => a + b, (m: Int, n: Int) => m + n)
 rdd3.collect
-
-
-val rdd4 = sc.parallelize(List("dog","cat","gnu","salmon","rabbit","turkey","wolf","bear","bee"), 3)
-val rdd5 = sc.parallelize(List(1,1,2,2,2,1,2,2,2), 3)
-val rdd6 = rdd5.zip(rdd4)
-val rdd7 = rdd6.combineByKey(List(_), (x: List[String], y: String) => x :+ y, (m: List[String], n: List[String]) => m ++ n)
-
-
+```
 ### countByKey 
 
 val rdd1 = sc.parallelize(List(("a", 1), ("b", 2), ("b", 2), ("c", 2), ("c", 1)))
@@ -119,5 +155,4 @@ rdd.foldByKey(0)(_+_)
 val rdd1 = sc.parallelize(List(1, 2, 3, 4, 5, 6, 7, 8, 9), 3)
 rdd1.foreachPartition(x => println(x.reduce(_ + _)))
  
- 
- 
+
