@@ -62,3 +62,8 @@ mapPartitionsWithIndex 一次拿出一个分区（分区中并没有数据，而
       it.map(e => s"part: $index, ele: $e")
     }
 	rdd.mapPartitionsWithIndex(fun)
+
+#### cache
+RDD的cache方法是lazy的，不会产生一个新的RDD，只是标记原来的RDD要被cache（在第一次触发action的时候缓存数据），如果任务只触发一次action的话，就不要使用cache
+
+注：在缓存数据的时候，放到内存的数据会比原来在文件系统的数据所用的空间大，因为使用了默认的序列化方式，节省时间
