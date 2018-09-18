@@ -64,6 +64,13 @@ mapPartitionsWithIndex 一次拿出一个分区（分区中并没有数据，而
 	rdd.mapPartitionsWithIndex(fun)
 
 #### cache
-RDD的cache方法是lazy的，不会产生一个新的RDD，只是标记原来的RDD要被cache（在第一次触发action的时候缓存数据），如果任务只触发一次action的话，就不要使用cache
+RDD的cache方法是lazy的，不会产生一个新的RDD，只是标记原来的RDD要被cache（在第一次触发action的时候缓存数据）。如果任务需要触发多次action，可以考虑将数据cache到内存。   
+- 缓存数据是在executor中，**占用executor所在的机器的内存**（一个task存放一块内存），如果hdfs数据不在当前节点上，需要通过网络拉取
+- 什么时候进行cache（要求计算很快，内存资源足够，**cache的数据会多次触发action**）
+- 建议根据精准条件filter之后，缩小范围之后再进行cache
+- 可以使用cache.unpersist(true/false)将缓存的数据清空，true表示阻塞
+- 如果内存空间不足，会自动采用内存+磁盘方式，只在内存中缓存一部分数据
 
-注：在缓存数据的时候，放到内存的数据会比原来在文件系统的数据所用的空间大，因为使用了默认的序列化方式，节省时间
+
+
+注：在缓存数据的时候，放到内存的数据会比原来在文件系统的数据所用的空间大，因为使用了JAVA默认的序列化方式，节省时间
