@@ -71,6 +71,22 @@ RDD的cache方法是lazy的，不会产生一个新的RDD，只是标记原来�
 - 可以使用cache.unpersist(true/false)将缓存的数据清空，true表示阻塞
 - 如果内存空间不足，会自动采用内存+磁盘方式，只在内存中缓存一部分数据
 
-
-
 注：在缓存数据的时候，放到内存的数据会比原来在文件系统的数据所用的空间大，因为直接存储了java对象，没有进行序列化，节省时间
+
+#### checkpoint
+使用场景
+- 迭代计算，要求保证数据安全
+- 对速度要求不高（与cache到内存相比）
+- 将中间结果保存到hdfs
+
+步骤：
+- 设置checkpoint目录（hdfs目录）
+- 经过复杂计算，得到中间结果
+- 将中间结果checkpoint到指定的hdfs目录
+- 后续计算就可以使用前面ck的数据了
+
+做了checkpoint的RDD就会将该RDD之前的依赖关系释放掉，下次使用该RDD的数据的时候直接从hdfs中读取。
+
+注：checkpoint和cache一样，不会生成新的RDD，只是标记当前的RDD需要checkpoint，然后在第一次触发action的时候执行chrckpoint，此时会有两个stage，一个进行计算，另一个进行checkpoint（将数据写入hdfs）
+
+
