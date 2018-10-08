@@ -60,3 +60,13 @@ DAGScheduler：将一个DAG切分成一到多个Stage，DAGScheduler切分的依
     }
   }
 ```
+### Spark任务执行流程
+![](https://github.com/lijingxiao/spark/blob/master/%E5%88%87%E5%88%86Stage/%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B.png)
+- Driver端提交Spark任务，向master申请资源；
+- master进行资源调度；
+- master与worker进行RPC通信，让worker启动executor；
+- worker启动executor；
+- executor与driver进行通信（请求task）；
+- （driver端）RDD触发action之后，会根据最后一个RDD从后往前推断依赖关系，构建DAG，遇到shuffle就切分stage；
+- （driver端）DAGScheduler切分完stage之后，先提交前面的stage，执行完之后再提交后面的stage，stage生成task，一个stage会生成多个业务逻辑相同的task，以TaskSet的形式传递给TaskScheduler，TaskScheduler将Task序列化，根据资源情况发送给executor；
+- executor接收到task后，先将task反序列化，然后用一个实现了Runnable接口的类将task包装起来，放到线程池中，然后包装类的run方法会被执行，进而调用task的业务逻辑。
