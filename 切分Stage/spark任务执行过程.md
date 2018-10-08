@@ -26,6 +26,7 @@ DAGScheduler：将一个DAG切分成一到多个Stage，DAGScheduler切分的依
 - 在同一个Stage中，会有多个算子，可以合并在一起，我们称其为pipeline（流水线：严格按照流程、顺序执行）
 
 **触发action的次数决定了产生多少个DAG；每个DAG中根据shuffle切分为一到多个Stage**
+一个stage中可能有多个分区，每个分区对应一个task
 
 #### 宽依赖与窄依赖
 - shuffle的定义：shuffle的意思是洗牌，将数据打散，如果父RDD一个分区的数据给了子RDD的多个分区(只要存在这种可能)，就存在shuffle
