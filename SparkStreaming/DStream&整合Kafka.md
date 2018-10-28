@@ -40,3 +40,19 @@ JavaInputDStream<String> message = KafkaUtils.createDirectStream(jssc, String.cl
                     });
 ```
 注意：直连方式只有在KafkaDStream的RDD中才能获取偏移量，所以必须在获取到DStream之后的第一个操作中获取offset
+
+
+### 代码块在哪一端执行
+```java
+kafkaStream.foreachRDD(rdd -> {
+	//foreachRDD这个函数是在Driver端调用的，获取DStream中的rdd
+
+	//调用RDD的算子，在Driver端
+	mapRDD = rdd.map(...)
+	mapRDD.foreachPartition(part -> {
+		//在Executor端执行
+		...
+	}
+  ```
+
+})
