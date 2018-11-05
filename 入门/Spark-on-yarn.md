@@ -53,6 +53,7 @@ spark-shell必须使用client模式
 ### 原理
 #### cluster模式
  ![](https://github.com/lijingxiao/spark/blob/master/%E5%85%A5%E9%97%A8/spark-on-yarn-cluster.png)
+ 
  Spark Driver首先作为一个ApplicationMaster在YARN集群中启动，客户端提交给ResourceManager的每一个job都会在集群的NodeManager节点上分配一个唯一的ApplicationMaster，由该ApplicationMaster管理全生命周期的应用。具体过程：
 - 由client向ResourceManager提交请求，并上传jar到HDFS上
 这期间包括四个步骤：
@@ -69,6 +70,7 @@ d).设置运行环境和container上下文（launch-container.sh等脚本)
 - Spark ApplicationMaster直接和container（executor）进行交互，完成这个分布式任务。
 #### client模式
  ![](https://github.com/lijingxiao/spark/blob/master/%E5%85%A5%E9%97%A8/spark-on-yarn-client.png)
+ 
  在client模式下，Driver运行在Client上，通过ApplicationMaster向RM获取资源。本地Driver负责与所有的executor container进行交互，并将最后的结果汇总。结束掉终端，相当于kill掉这个spark应用。一般来说，如果运行的结果仅仅返回到terminal上时需要配置这个。
 
 客户端的Driver将应用提交给Yarn后，Yarn会先后启动ApplicationMaster和executor，另外ApplicationMaster和executor都 是装载在container里运行，container默认的内存是1G，ApplicationMaster分配的内存是driver- memory，executor分配的内存是executor-memory。同时，因为Driver在客户端，所以程序的运行结果可以在客户端显 示，Driver以进程名为SparkSubmit的形式存在。
