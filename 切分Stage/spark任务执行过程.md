@@ -72,7 +72,7 @@ DAGScheduler：将一个DAG切分成一到多个Stage，DAGScheduler切分的依
 - executor接收到task后，先将task反序列化，然后用一个实现了Runnable接口的类将task包装起来，放到线程池中，然后包装类的run方法会被执行，进而调用task的业务逻辑。
 
 
-#### job task
+### job task
 job包含很多 task 的并行计算，可以认为是 Spark RDD 里面的 action，每个 action 的触发会生成一个job。 用户提交的 Job 会提交给 DAGScheduler，Job 会被分解成 Stage，Stage 会被细化成 Task，Task 简单的说就是在一个数据 partition 上的单个数据处理流程。
 
 一个Job被拆分成若干个Stage，每个Stage执行一些计算，产生一些中间结果。它们的目的是最终生成这个Job的计算结果。而每个Stage是一个task set，包含若干个task。Task是Spark中最小的工作单元，在一个executor上完成一个特定的事情。
@@ -80,7 +80,7 @@ job包含很多 task 的并行计算，可以认为是 Spark RDD 里面的 actio
 一个job就是一个DAG？
 
 
-#### worker  executor
+### worker  executor
 
 - 每个Worker上存在一个或者多个ExecutorBackend 进程。每个进程包含一个Executor对象，该对象持有一个线程池，每个线程可以执行一个task。
 - 每个application包含一个 driver 和多个 executors，每个 executor里面运行的tasks都属于同一个application。
